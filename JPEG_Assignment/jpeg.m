@@ -1,4 +1,4 @@
-function O=jpeg(fname_inp,toshow)
+function [O,O2]=jpeg(fname_inp,toshow,toplot)
     QX=[ 16 11 10 16 24 40 51 61;
          12 12 14 19 26 58 60 55;
          14 13 16 24 40 57 69 56;
@@ -7,7 +7,16 @@ function O=jpeg(fname_inp,toshow)
          24 35 55 64 81 104 113 92;
          49 64 78 87 103 121 120 101;
          72 92 95 98 112 100 103 99];
-    QX=QX(1:7,1:7);
+    quality=50;
+    block_size=4;
+    if quality > 50
+        QX = round(QX.*(ones(8)*((100-quality)/50)));
+        
+    elseif quality < 50
+        QX = round(QX.*(ones(8)*(50/quality)));
+        
+    end
+    QX=QX(1:block_size,1:block_size);
     n=size(QX,1);
     input_image=rgb2gray(imread(fname_inp));
     dct_quantized=encode_jpeg(fname_inp,QX,n);
@@ -17,6 +26,16 @@ function O=jpeg(fname_inp,toshow)
         O{i}=decode_jpeg(dct_quantized,QX,n,i);
         rms(i)=compute_imgs_rmse(input_image,O{i});
     end
+    O2=cell(n,1);
+    fig=figure;
+    for i=1:n
+        imshow(O{i});
+        title(sprintf("RMS=%0.2f",rms(i)));
+        drawnow
+        frame=getframe(fig);
+        O2{i}=frame2im(frame);
+    end
+    close;
     if toshow==1
         a=ceil(sqrt(n));
         figure('Name','Images');
@@ -26,10 +45,12 @@ function O=jpeg(fname_inp,toshow)
             title(sprintf('Feature Length=%d,RMSE=%0.2f',i,rms(i)));
         end
     end
-    figure('Name','Plot of rms vs feature length');
-    plot(1:n,rms,'r-');
-    xlabel('Feature Lenght');
-    ylabel('RMSE');
+    if toplot==1
+        figure('Name','Plot of rms vs feature length');
+        plot(1:n,rms,'r-');
+        xlabel('Feature Lenght');
+        ylabel('RMSE');
+    end
 end
 function O=encode_jpeg(fname_inp,QX,n)
     I=imread(fname_inp);
